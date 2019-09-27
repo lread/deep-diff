@@ -141,9 +141,9 @@
    (let [extra-handlers (:extra-handlers opts)]
      (puget/pretty-printer (merge {:width          (or *print-length* 100)
                                    :print-color    true
-                                   :color-scheme   {::deletion  [:red]
-                                                    ::insertion [:green]
-                                                    ::other     [:yellow]
+                                   :color-scheme   {::deletion  [:black :bg-red]
+                                                    ::insertion [:black :bg-green]
+                                                    ::other     [:black :bg-yellow]
                                                     ;; puget uses green and red for
                                                     ;; boolean/tag, but we want to reserve
                                                     ;; those for diffed values.
