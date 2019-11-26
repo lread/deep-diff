@@ -1,11 +1,10 @@
 (ns lambdaisland.deep-diff.printer
-  (:require [fipp.engine :as fipp]
-            [fipp.visit :as fv]
+  (:require [clojure.string :as string]
+            [fipp.engine :as fipp]
             [puget.color :as color]
             [puget.dispatch]
             [puget.printer :as puget]
-            [arrangement.core]
-            [lambdaisland.deep-diff.diff :as diff])
+            [arrangement.core])
   (:import (java.text SimpleDateFormat)
            (java.util TimeZone)
            (java.sql Timestamp)))
@@ -144,6 +143,7 @@
                                    :color-scheme   {::deletion  [:black :bg-red]
                                                     ::insertion [:black :bg-green]
                                                     ::other     [:black :bg-yellow]
+                                                    :delimiter  [:blue]
                                                     ;; puget uses green and red for
                                                     ;; boolean/tag, but we want to reserve
                                                     ;; those for diffed values.
@@ -155,5 +155,26 @@
 (defn format-doc [expr printer]
   (puget/format-doc printer expr))
 
+(defn fixup-indent-colors
+  "We fixup to not colorize indents.
+  Ideally this would be supported by puget and fipp, but it currently is not"
+  [printed-doc]
+  (loop [printed-doc printed-doc
+         multiline-colorings (re-seq
+                              #"(?msx)                     # allow comments, multiline and match all
+                                (\u001b\[[0-9;]*[mK])      # any escape sequence
+                                ([^\u001b]*?\n[^\u001b]*?) # followed by text with at least one
+                                                           # newline and no embedded escape sequences
+                                (\u001b\[0[mK])            # followed by a no-color sequence"
+                              printed-doc)]
+    (if (not (first multiline-colorings))
+      printed-doc
+      (let [[_ on-esc text off-esc] (first multiline-colorings)
+            new-text (string/replace text #"(?ms)(\n *)" (str off-esc "$1" on-esc))]
+        (recur (.replace printed-doc (str on-esc text off-esc) (str on-esc new-text off-esc))
+               (rest multiline-colorings))))) )
+
 (defn print-doc [doc printer]
-  (fipp.engine/pprint-document doc {:width (:width printer)}))
+  (let [doc (with-out-str
+              (fipp.engine/pprint-document doc {:width (:width printer)}))]
+    (println #_doc (fixup-indent-colors doc))))
