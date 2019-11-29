@@ -7,7 +7,8 @@
             [arrangement.core])
   (:import (java.text SimpleDateFormat)
            (java.util TimeZone)
-           (java.sql Timestamp)))
+           (java.sql Timestamp)
+           (java.io StringWriter)))
 
 (defn print-deletion [printer expr]
   (let [no-color (assoc printer :print-color false)]
@@ -175,6 +176,7 @@
                (rest multiline-colorings))))) )
 
 (defn print-doc [doc printer]
-  (let [doc (with-out-str
-              (fipp.engine/pprint-document doc {:width (:width printer)}))]
-    (println #_doc (fixup-indent-colors doc))))
+  (let [doc-sw (StringWriter.)
+        opts {:width (:width printer) :writer doc-sw}]
+    (fipp.engine/pprint-document doc opts)
+    (spit (or (:output-file printer) *out*) (fixup-indent-colors (str doc-sw)))))
